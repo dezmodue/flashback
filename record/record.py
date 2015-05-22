@@ -1,12 +1,14 @@
 #!/usr/bin/python
 r""" Track the MongoDB activities by tailing oplog and profiler output"""
 
+from argparse import ArgumentParser
 from bson.timestamp import Timestamp
 from datetime import datetime
 from pymongo import MongoClient, uri_parser
+import os
 import pymongo
 from threading import Thread
-import config
+import importlib
 import cPickle
 import Queue
 import time
@@ -70,7 +72,7 @@ class MongoQueryRecorder(object):
             """Return the tailer state "struct" """
             s = utils.EmptyClass()
             s.entries_received = 0
-            s. entries_written = 0
+            s.entries_written = 0
             s.alive = True
             s.last_received_ts = None
             s.last_get_none_ts = None
@@ -308,6 +310,7 @@ class MongoQueryRecorder(object):
                         args=(tailer, tailer_id, doc_queue, state,
                               end_datetime))
                 })
+                
 
         for worker_info in workers_info:
             utils.LOG.info("Starting thread: %s", worker_info["name"])
@@ -391,9 +394,93 @@ class MongoQueryRecorder(object):
             output_file=self.config["output_file"])
 
 
+def get_args():
+    parser = ArgumentParser(description='Recording the inbound traffic for a database.')
+
+    parser.add_argument('-o', '--oplog_server', dest='opsrv', required=False,
+                      help='The server to use to retrieve the oplog, format HOST:PORT',
+                      metavar='OPLOG_SERVER')
+    parser.add_argument('-p', '--profile_server', dest='profsrv', required=False,
+                      help='The server to use to retrieve the profiling data, format HOST:PORT', metavar='PROFILE_SERVER')
+    parser.add_argument('-s', '--seconds', dest='seconds', type=int, required=False,
+                      help='The number of seconds to run the recording', metavar='SECONDS')
+    parser.add_argument('-d', '--databases', dest='databases', required=False,
+                        help='A comma delimited list of databases to record from', metavar='DATABASES')
+    parser.add_argument('-c', '--collections', dest='collections', required=False,
+                        help='A comma delimited list of collections to record from',
+                        metavar='COLLECTIONS')
+    parser.add_argument('-l', '--logdir', dest='logdir', required=False,
+                            help='The directory to store output to',
+                            metavar='LOGDIR')
+    parser.add_argument('-f', '--config_file', dest='configfile', required=False,
+                                help='The configuration file',
+                                metavar='CONFIGFILE')
+    parser.add_argument('-n', '--recording_name', dest='recording_name', required=False,
+                                    help='A representative name for this recording, use in combination with -l',
+                                    metavar='RECORDING_NAME')
+    parser.add_argument('-z', '--noop', dest='noop', action='store_true', required=False, default=False,
+                                        help='Just output the merged configuration, do not actually start the recording')
+
+    args = parser.parse_args()
+
+    return args
+
 def main():
     """Recording the inbound traffic for a database."""
-    db_config = config.DB_CONFIG
+
+    args = get_args()
+
+    if args.configfile:
+       print "Using config file: %s" % args.configfile
+       config = importlib.import_module(os.path.splitext(args.configfile)[0])
+       db_config = config.DB_CONFIG
+    else:
+       if os.path.exists(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.py')):
+          print "Defaulting to %s", os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.py')
+          import config
+          db_config = config.DB_CONFIG
+       else:
+          print "WARN: cannot find config.py, parsing arguments..."
+          db_config = {}
+
+
+    if args.opsrv:
+       utils.LOG.info("Overriding oplog_servers in config file %s with argument --oplog_server: %s", db_config['oplog_servers'], args.opsrv)
+       oplogurl = "mongodb://" + args.opsrv
+       db_config['oplog_servers'] = [{ "mongodb_uri": oplogurl }]
+    if args.profsrv:
+       utils.LOG.info("Overriding config file with argument --profile_server: %s", args.profsrv)
+       profurl = "mongodb://" + args.profsrv
+       db_config['profiler_servers'] = [{ "mongodb_uri": profurl }]
+    if args.seconds:
+       db_config['duration_secs'] = args.seconds
+    if args.databases:
+       db_config['target_databases'] = args.databases.split(',')
+    if args.collections:
+       db_config['target_collections'] = args.collections.split(',')
+
+    if args.logdir:
+        if os.path.isdir(args.logdir):
+           utils.LOG.info("Recording files will be stored in %s as requested", args.logdir)
+           prefix = prefix = datetime.now().strftime("%Y%d%m%H%M%S")
+           if args.recording_name:
+              prefix = prefix + '-' + args.recording_name
+
+           db_config['oplog_output_file'] = os.path.join(args.logdir, (prefix + '_oplog_output_file'))
+           db_config['output_file'] = os.path.join(args.logdir, (prefix + '_output_file'))
+
+    utils.LOG.info("Oplog Servers: %s", db_config['oplog_servers'])
+    utils.LOG.info("Profiler servers: %s", db_config['profiler_servers'])
+    utils.LOG.info("Recording duration in seconds: %s", db_config['duration_secs'])
+    utils.LOG.info("Target databases: %s", db_config['target_databases'])
+    utils.LOG.info("Target collections: %s", db_config['target_collections'])
+    utils.LOG.info("Oplog output file: %s", db_config['oplog_output_file'])
+    utils.LOG.info("Output file: %s", db_config['output_file'])
+
+    if args.noop:
+       utils.LOG.info("  *****   Skipping recording as per --noop argument")
+       return
+
     recorder = MongoQueryRecorder(db_config)
 
     def signal_handler(sig, dummy):

@@ -1,18 +1,26 @@
 """Globally shared common utilities functions/classes/variables"""
 import logging
-import config
 import cPickle
 import time
 import pymongo
 import string
 import threading
 import constants
+import os
 
 
 def _make_logger():
     """Create a new logger"""
     logger = logging.getLogger("parse.flashback")
-    logger.setLevel(config.APP_CONFIG["logging_level"])
+
+    cfg_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.py')
+    if os.path.exists(cfg_file):
+       import config
+       logger.setLevel(config.APP_CONFIG["logging_level"])
+    else:
+       print "WARN: cannot find config.py, defaulting to debug level logging..."
+       logger.setLevel(logging.DEBUG)
+
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(
         "%(asctime)s [%(levelname)s:%(processName)s] %(message)s",
