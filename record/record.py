@@ -460,9 +460,11 @@ def main():
        db_config['target_collections'] = args.collections.split(',')
 
     if args.logdir:
+        #if not os.path.isdir(args.logdir):
+        #    os.makedirs(args.logdir)
         if os.path.isdir(args.logdir):
            utils.LOG.info("Recording files will be stored in %s as requested", args.logdir)
-           prefix = prefix = datetime.now().strftime("%Y%d%m%H%M%S")
+           prefix = datetime.now().strftime("%Y%d%m%H%M%S")
            if args.recording_name:
               prefix = prefix + '-' + args.recording_name
 
@@ -476,6 +478,15 @@ def main():
     utils.LOG.info("Target collections: %s", db_config['target_collections'])
     utils.LOG.info("Oplog output file: %s", db_config['oplog_output_file'])
     utils.LOG.info("Output file: %s", db_config['output_file'])
+
+    config_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.py'), "w")
+    utils.LOG.info("Writing config file: %s", os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.py'))
+    file_content = "import logging \nDB_CONFIG = %s \nAPP_CONFIG = { \"logging_level\": logging.DEBUG }" % db_config
+    config_file.write(file_content)
+    utils.LOG.info("Written %s to config file", file_content) 
+    config_file.close()
+    
+    import config
 
     if args.noop:
        utils.LOG.info("  *****   Skipping recording as per --noop argument")
