@@ -4,6 +4,7 @@ import (
 	"errors"
 	"gopkg.in/mgo.v2"
 	"time"
+	"reflect"
 )
 
 var (
@@ -47,12 +48,22 @@ func (e *OpsExecutor) execQuery(
 	query := coll.Find(content["query"])
 	result := []Document{}
 	if content["ntoreturn"] != nil {
-		ntoreturn := int(content["ntoreturn"].(float64))
-		query.Limit(ntoreturn)
+		if reflect.TypeOf(content["ntoreturn"]).Kind() == reflect.Int32 {
+			ntoreturn := int(content["ntoreturn"].(int32))
+			query.Limit(ntoreturn)
+		} else {
+			ntoreturn := int(content["ntoreturn"].(float64))
+			query.Limit(ntoreturn)
+		}
 	}
 	if content["ntoskip"] != nil {
-		ntoskip := int(content["ntoskip"].(float64))
-		query.Skip(ntoskip)
+		if reflect.TypeOf(content["ntoskip"]).Kind() == reflect.Int32 {
+			ntoskip := int(content["ntoskip"].(int32))
+			query.Skip(ntoskip)
+		} else {
+			ntoskip := int(content["ntoskip"].(float64))
+			query.Skip(ntoskip)
+		}
 	}
 	err := query.All(&result)
 	e.lastResult = &result

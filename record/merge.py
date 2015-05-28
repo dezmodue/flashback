@@ -8,24 +8,31 @@ from bson.json_util import dumps
 
 
 def dump_op(output, op):
-    copier = utils.DictionaryCopier(op)
-    copier.copy_fields("ts", "ns", "op")
-    op_type = op["op"]
+    try:
+        copier = utils.DictionaryCopier(op)
+        copier.copy_fields("ts", "ns", "op")
+        op_type = op["op"]
 
-    # handpick some essential fields to execute.
-    if op_type == "query":
-        copier.copy_fields("query", "ntoskip", "ntoreturn")
-    elif op_type == "insert":
-        copier.copy_fields("o")
-    elif op_type == "update":
-        copier.copy_fields("updateobj", "query")
-    elif op_type == "remove":
-        copier.copy_fields("query")
-    elif op_type == "command":
-        copier.copy_fields("command")
+        # handpick some essential fields to execute.
+        if op_type == "query":
+            copier.copy_fields("query", "ntoskip", "ntoreturn")
+        elif op_type == "insert":
+            copier.copy_fields("o")
+        elif op_type == "update":
+            copier.copy_fields("updateobj", "query")
+        elif op_type == "remove":
+            copier.copy_fields("query")
+        elif op_type == "command":
+            copier.copy_fields("command")
 
-    output.write(dumps(copier.dest))
-    output.write("\n")
+        output.write(dumps(copier.dest))
+        output.write("\n")
+    except Exception, e:
+        errfile = open('/tmp/merge_errors', "a")
+        err_msg = "Skipping one record %s \n" % str(e)
+        errfile.write(err_msg)
+        errfile.close()
+        print "SKIPPING dump_op, appending to /tmp/merge_errors: %s" % str(e)
 
 
 def merge_to_final_output(oplog_output_file, profiler_output_files, output_file):

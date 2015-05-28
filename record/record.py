@@ -52,6 +52,10 @@ def tail_to_queue(tailer, identifier, doc_queue, state, end_time,
                 utils.LOG.error(
                     "BADRUN: source %s: We appear to not have the %s collection created or is non-capped! %s",
                     identifier, tailer.collection, e)
+        except Exception, e:
+            # TODO: understand why we get bad bson date error, probably only need to catch OverflowError
+            utils.LOG.error("SKIPPING document in tail_to_queue: %s", e)
+            utils.LOG.error("SKIPPED document in tail_to_queue: %s, doc)
         preformed_loops += 1
 
     tailer_state.alive = False
@@ -462,7 +466,7 @@ def main():
     if args.logdir:
         if os.path.isdir(args.logdir):
            utils.LOG.info("Recording files will be stored in %s as requested", args.logdir)
-           prefix = prefix = datetime.now().strftime("%Y%d%m%H%M%S")
+           prefix = datetime.now().strftime("%Y%d%m%H%M%S")
            if args.recording_name:
               prefix = prefix + '-' + args.recording_name
 
