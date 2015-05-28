@@ -34,7 +34,6 @@ def dump_op(output, op):
         errfile.close()
         print "SKIPPING dump_op, appending to /tmp/merge_errors: %s" % str(e)
 
-
 def merge_to_final_output(oplog_output_file, profiler_output_files, output_file):
     """
     * Why merge files:
@@ -150,11 +149,11 @@ def merge_to_final_output(oplog_output_file, profiler_output_files, output_file)
 def main():
     # TODO: this command is not user-friendly and doesn't do any sanity check
     # for the parameters.
-    db_config = config.DB_CONFIG
     if len(sys.argv) != 1:
         params = sys.argv[1:]
         merge_to_final_output(params[0], params[1], params[2])
     else:
+        db_config = config.DB_CONFIG
         merge_to_final_output(db_config["oplog_output_file"],
                               db_config["profiler_output_file"],
                               db_config["output_file"])
