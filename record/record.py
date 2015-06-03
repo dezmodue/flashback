@@ -55,7 +55,7 @@ def tail_to_queue(tailer, identifier, doc_queue, state, end_time,
         except Exception, e:
             # TODO: understand why we get bad bson date error, probably only need to catch OverflowError
             utils.LOG.error("SKIPPING document in tail_to_queue: %s", e)
-            utils.LOG.error("SKIPPED document in tail_to_queue: %s, doc)
+            utils.LOG.error("SKIPPED document in tail_to_queue: %s", doc)
         preformed_loops += 1
 
     tailer_state.alive = False
