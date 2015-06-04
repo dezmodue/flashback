@@ -168,7 +168,7 @@ func parseFlags() error {
 		return errors.New("The `workers` argument must be a positive number")
 	}
 	if maxOps == 0 {
-		maxOps = math.MaxUint32
+		maxOps = math.MaxInt32
 	}
 	var err error
 	if logger, err = flashback.NewLogger(stdout, stderr); err != nil {
