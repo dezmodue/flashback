@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mongodb/mongo-tools/common/bsonutil" // requires go 1.4
-	"github.com/mongodb/mongo-tools/common/json"
+	"github.com/dezmodue/mongo-tools/common/bsonutil" // requires go 1.4
+	"github.com/dezmodue/mongo-tools/common/json"
 )
 
 // OpsReader Reads the ops from a source and present a interface for consumers
@@ -137,12 +137,14 @@ func (r *ByLineOpsReader) Next() *Op {
 		r.err = err
 
 		if err != nil && err != io.EOF {
+			r.logger.Infof("ERROR while reading:", err)
 			return nil
 		}
 
 		rawObj, err := parseJson(jsonText)
 		r.err = err
 		if err != nil {
+			r.logger.Infof("ERROR while reading:", err)
 			return nil
 		}
 		r.opsRead++
